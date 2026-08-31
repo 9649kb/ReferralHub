@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReferralHub — Prototype</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --ivory:#F6F4EE;
+    --ink:#182B24;
+    --forest:#2F6F5E;
+    --forest-dark:#1F4E42;
+    --amber:#C98A3E;
+    --amber-soft:#F1DFC3;
+    --line:#DCD6C6;
+    --red:#B5493A;
+    --card:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--ivory); color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+  }
+  h1,h2,h3,.display{ font-family:'Fraunces', serif; letter-spacing:-0.01em; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  /* ---------- Auth screen ---------- */
+  #auth-screen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .auth-box{
+    max-width:420px; width:100%; background:var(--card); border:1px solid var(--line);
+    border-radius:4px; padding:40px 32px;
+  }
+  .chain-mark{ display:flex; align-items:center; gap:6px; margin-bottom:28px; }
+  .chain-dot{ width:10px; height:10px; border-radius:50%; background:var(--forest); }
+  .chain-dot.amber{ background:var(--amber); }
+  .chain-line{ flex:1; height:1px; background:var(--line); }
+  .auth-box h1{ font-size:28px; margin:0 0 6px; font-weight:600; }
+  .auth-box p.sub{ margin:0 0 28px; color:#5b6b64; font-size:14px; }
+  label{ display:block; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:#5b6b64; margin-bottom:6px; margin-top:16px; }
+  input, select, textarea{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:3px;
+    font-family:'IBM Plex Sans',sans-serif; font-size:14px; background:#FCFBF8; color:var(--ink);
+  }
+  input:focus, select:focus, textarea:focus{ outline:2px solid var(--forest); outline-offset:1px; border-color:var(--forest); }
+  button{ cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
+  .btn-primary{
+    margin-top:24px; width:100%; padding:12px; background:var(--forest); color:white; border:none;
+    border-radius:3px; font-size:14px; font-weight:600; letter-spacing:0.01em;
+  }
+  .btn-primary:hover{ background:var(--forest-dark); }
+  .toggle-row{ margin-top:18px; font-size:13px; color:#5b6b64; text-align:center; }
+  .toggle-row a{ color:var(--forest); cursor:pointer; font-weight:600; text-decoration:none; }
+  .err{ color:var(--red); font-size:13px; margin-top:10px; }
+
+  /* ---------- App shell ---------- */
+  #app-screen{ display:none; min-height:100vh; }
+  .shell{ display:flex; min-height:100vh; }
+  .sidebar{
+    width:220px; background:var(--ink); color:var(--ivory); flex-shrink:0;
+    display:flex; flex-direction:column; padding:22px 16px;
+  }
+  .sidebar .brand{ display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:18px; font-weight:600; }
+  .sidebar .brand .chain-dot{ width:8px; height:8px; }
+  .sidebar .company-name{ font-size:12px; color:#9fb0a8; margin-bottom:28px; }
+  .nav-item{
+    padding:10px 12px; border-radius:3px; font-size:14px; margin-bottom:2px; color:#cfd9d4;
+    cursor:pointer; display:flex; align-items:center; gap:10px;
+  }
+  .nav-item:hover{ background:#223a32; }
+  .nav-item.active{ background:var(--forest); color:white; font-weight:600; }
+  .nav-spacer{ flex:1; }
+  .logout{ font-size:12px; color:#9fb0a8; cursor:pointer; padding:10px 12px; }
+  .logout:hover{ color:white; }
+
+  .main{ flex:1; padding:32px 40px; overflow-y:auto; min-width:0; }
+  .main h2{ font-size:24px; margin:0 0 4px; }
+  .main .subhead{ color:#5b6b64; font-size:14px; margin-bottom:24px; }
+
+  .mobile-topbar{ display:none; }
+  .table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+
+  /* ---------- Responsive ---------- */
+  .menu-backdrop{ display:none; }
+  @media (max-width: 860px){
+    .shell{ flex-direction:column; }
+    .mobile-topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      background:var(--ink); color:var(--ivory); padding:14px 16px; position:sticky; top:0; z-index:40;
+    }
+    .mobile-topbar .brand{ font-size:16px; margin:0; }
+    .hamburger{
+      width:36px; height:36px; border:1px solid #3c5850; border-radius:4px; background:transparent;
+      color:var(--ivory); font-size:16px; display:flex; align-items:center; justify-content:center;
+      transition:background 0.15s;
+    }
+    .hamburger:hover{ background:#223a32; }
+    .menu-backdrop.open{ display:block; position:fixed; inset:0; top:57px; background:rgba(24,43,36,0.35); z-index:20; }
+    .sidebar{
+      position:fixed; top:57px; left:0; right:0; z-index:30;
+      width:100%; flex-direction:column; padding:8px; gap:2px;
+      display:none; max-height:calc(100vh - 57px); overflow-y:auto;
+      box-shadow:0 8px 20px rgba(0,0,0,0.18);
+      border-bottom:1px solid #2a4038;
+    }
+    .sidebar.open{ display:flex; }
+    .sidebar .brand, .sidebar .company-name{ display:none; }
+    .nav-item{ font-size:15px; padding:14px 16px; margin:0; border-radius:6px; }
+    .nav-item.active{ background:var(--forest); }
+    .nav-spacer{ display:none; }
+    .logout{ width:100%; text-align:center; padding:14px 16px; border-top:1px solid #2a4038; margin-top:4px; font-size:14px; }
+    .main{ padding:20px 16px 60px; }
+    .stat-grid{ grid-template-columns:repeat(2,1fr); gap:10px; }
+    .stat-card{ padding:14px; }
+    .stat-card .num{ font-size:20px; }
+    .panel{ padding:16px; }
+    .form-row{ grid-template-columns:1fr; }
+    .modal{ width:92vw; padding:20px; }
+    table{ font-size:12.5px; }
+    th, td{ padding:8px 6px; }
+    .auth-box{ padding:28px 20px; }
+    .public-wrap{ padding:28px 16px; }
+  }
+  @media (max-width: 420px){
+    .stat-grid{ grid-template-columns:1fr 1fr; }
+    .auth-box h1{ font-size:22px; }
+  }
+
+  .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:28px; }
+  .stat-card{ background:var(--card); border:1px solid var(--line); border-radius:4px; padding:18px; }
+  .stat-card .num{ font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; color:var(--forest-dark); }
+  .stat-card .label{ font-size:12px; color:#5b6b64; margin-top:4px; text-transform:uppercase; letter-spacing:0.04em; }
+
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:4px; padding:24px; margin-bottom:20px; }
+  .panel-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .panel-header h3{ font-size:16px; margin:0; font-weight:600; }
+
+  .chart-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px; }
+  .chart-grid .panel{ margin-bottom:0; }
+  .chart-box{ position:relative; height:220px; }
+  @media (max-width: 860px){
+    .chart-grid{ grid-template-columns:1fr; }
+    .chart-box{ height:200px; }
+  }
+
+  /* ---------- Subscription plans ---------- */
+  .status-banner{
+    background:#DCEDE7; border:1px solid var(--forest); border-radius:4px; padding:14px 18px;
+    font-size:14px; color:var(--forest-dark); margin-bottom:22px;
+  }
+  .status-banner.trial{ background:var(--amber-soft); border-color:var(--amber); color:#8a5b1f; }
+  .plan-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  @media (max-width: 860px){ .plan-grid{ grid-template-columns:1fr; } }
+  .plan-card{
+    background:var(--card); border:1px solid var(--line); border-radius:6px; padding:22px;
+    display:flex; flex-direction:column;
+  }
+  .plan-card.current{ border-color:var(--forest); border-width:2px; }
+  .plan-card .plan-name{ font-family:'Fraunces',serif; font-size:18px; font-weight:600; }
+  .plan-card .plan-price{ font-family:'IBM Plex Mono',monospace; font-size:22px; margin:8px 0 14px; color:var(--forest-dark); }
+  .plan-card ul{ list-style:none; margin:0 0 18px; padding:0; font-size:13px; color:#5b6b64; flex:1; }
+  .plan-card li{ padding:5px 0; }
+  .plan-card li:before{ content:"✓ "; color:var(--forest); font-weight:600; }
+  .current-tag{ display:inline-block; font-size:11px; font-weight:600; color:var(--forest-dark); background:#DCEDE7; padding:3px 10px; border-radius:20px; margin-bottom:10px; align-self:flex-start; }
+
+  /* ---------- Admin ---------- */
+  .admin-row{ display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid #EEEAE0; gap:12px; flex-wrap:wrap; }
+  .admin-row:last-child{ border-bottom:none; }
+  .admin-row .adm-name{ font-weight:600; font-size:14px; }
+  .admin-row .adm-sub{ font-size:12px; color:#5b6b64; }
+  .admin-row .adm-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th{ text-align:left; padding:8px 10px; color:#5b6b64; font-weight:600; border-bottom:1px solid var(--line); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; }
+  td{ padding:10px 10px; border-bottom:1px solid #EEEAE0; }
+  tr:last-child td{ border-bottom:none; }
+  .empty{ padding:24px; text-align:center; color:#8a978f; font-size:13px; }
+
+  .btn-sm{ padding:6px 12px; border-radius:3px; border:1px solid var(--forest); background:white; color:var(--forest); font-size:12px; font-weight:600; }
+  .btn-sm:hover{ background:var(--forest); color:white; }
+  .btn-sm.amber{ border-color:var(--amber); color:var(--amber); }
+  .btn-sm.amber:hover{ background:var(--amber); color:white; }
+  .btn-sm.disabled{ opacity:0.4; pointer-events:none; }
+
+  .pill{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; letter-spacing:0.02em; }
+  .pill.prospect{ background:#EAE6DA; color:#6b6555; }
+  .pill.lead{ background:#F1DFC3; color:#8a5b1f; }
+  .pill.client{ background:#DCEDE7; color:#1F4E42; }
+  .pill.payable{ background:#F1DFC3; color:#8a5b1f; }
+  .pill.paid{ background:#DCEDE7; color:#1F4E42; }
+
+  .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .code-badge{ font-family:'IBM Plex Mono',monospace; background:#EFEBDF; padding:2px 8px; border-radius:3px; font-size:12px; }
+
+  .modal-bg{ display:none; position:fixed; inset:0; background:rgba(24,43,36,0.4); align-items:center; justify-content:center; z-index:50; }
+  .modal-bg.show{ display:flex; }
+  .modal{ background:white; border-radius:4px; padding:28px; width:420px; max-width:90vw; }
+  .modal h3{ margin:0 0 18px; font-size:18px; }
+  .modal-actions{ display:flex; gap:10px; margin-top:20px; }
+  .modal-actions .btn-primary{ margin-top:0; }
+  .btn-cancel{ flex:1; padding:12px; background:white; border:1px solid var(--line); border-radius:3px; font-size:14px; }
+
+  .link-box{ display:flex; gap:8px; align-items:center; background:#F1EEE4; padding:10px 12px; border-radius:3px; margin-top:8px; }
+  .link-box input{ background:transparent; border:none; font-family:'IBM Plex Mono',monospace; font-size:12px; padding:0; }
+
+  /* ---------- Settings / profile ---------- */
+  .cover-upload{
+    position:relative; width:100%; height:150px; border-radius:4px; background:var(--forest) url('') center/cover;
+    background-color:#DCEDE7; display:flex; align-items:center; justify-content:center; overflow:hidden;
+    border:1px dashed var(--line); margin-bottom:20px;
+  }
+  .cover-upload img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .cover-upload .upload-hint{ position:relative; z-index:2; background:rgba(24,43,36,0.55); color:white; font-size:12px; padding:6px 12px; border-radius:20px; }
+  .logo-row{ display:flex; align-items:center; gap:16px; margin-bottom:20px; }
+  .logo-upload{
+    width:72px; height:72px; border-radius:50%; background:var(--amber-soft); border:1px dashed var(--line);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; position:relative;
+    font-size:24px; font-family:'Fraunces',serif; color:var(--forest-dark); font-weight:600;
+  }
+  .logo-upload img{ width:100%; height:100%; object-fit:cover; }
+  .upload-label{ font-size:12px; color:var(--forest); font-weight:600; cursor:pointer; }
+  .upload-label input{ display:none; }
+  .public-cover{ height:110px; background:var(--forest); background-size:cover; background-position:center; margin:-32px -32px 0; }
+  .public-logo{ width:64px; height:64px; border-radius:50%; border:3px solid white; margin-top:-32px; background:var(--amber-soft); object-fit:cover; position:relative; z-index:2; }
+
+  /* ---------- Content header (company profile bar above each view) ---------- */
+  .content-header{
+    display:flex; align-items:center; gap:14px; padding-bottom:18px; margin-bottom:26px;
+    border-bottom:1px solid var(--line);
+  }
+  .content-header .ch-logo{
+    width:46px; height:46px; border-radius:50%; flex-shrink:0; overflow:hidden;
+    background:var(--amber-soft); display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces',serif; font-weight:600; font-size:18px; color:var(--forest-dark);
+  }
+  .content-header .ch-logo img{ width:100%; height:100%; object-fit:cover; }
+  .content-header .ch-name{ font-size:16px; font-weight:600; font-family:'Fraunces',serif; line-height:1.2; }
+  .content-header .ch-sub{ font-size:12px; color:#5b6b64; margin-top:1px; }
+  .content-header .ch-spacer{ flex:1; }
+  .content-header .ch-badge{
+    font-size:11px; font-weight:600; color:var(--forest-dark); background:#DCEDE7;
+    padding:5px 12px; border-radius:20px; letter-spacing:0.02em; white-space:nowrap;
+  }
+  @media (max-width: 860px){
+    .content-header{ padding-bottom:14px; margin-bottom:18px; }
+    .content-header .ch-logo{ width:38px; height:38px; font-size:15px; }
+    .content-header .ch-badge{ display:none; }
+  }
+
+  /* ---------- Public referral page ---------- */
+  #public-screen{ display:none; min-height:100vh; }
+  .public-wrap{ max-width:480px; margin:0 auto; padding:48px 24px; }
+  .public-card{ background:var(--card); border:1px solid var(--line); border-radius:6px; padding:32px; }
+  .public-card .biz{ font-size:22px; font-weight:600; margin-bottom:2px; }
+  .public-card .loc{ font-size:13px; color:#5b6b64; margin-bottom:20px; }
+  .reco-box{ background:var(--amber-soft); border-radius:4px; padding:16px; margin-bottom:24px; font-size:14px; }
+  .reco-box b{ color:var(--forest-dark); }
+  .success-box{ background:#DCEDE7; border-radius:4px; padding:20px; text-align:center; }
+</style>
+</head>
+<body>
+
+<!-- ============ AUTH SCREEN ============ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="chain-mark"><div class="chain-dot"></div><div class="chain-line"></div><div class="chain-dot amber"></div><div class="chain-line"></div><div class="chain-dot"></div></div>
+    <h1 id="auth-title">Créer votre compte</h1>
+    <p class="sub" id="auth-sub">Gérez votre programme de recommandation ReferralHub.</p>
+
+    <div id="signup-fields">
+      <label>Nom de l'entreprise</label>
+      <input id="su-name" placeholder="Boutique Marie">
+      <label>Secteur d'activité</label>
+      <input id="su-sector" placeholder="Mode, coiffure, restaurant...">
+      <label>Ville / Pays</label>
+      <input id="su-location" placeholder="Lomé, Togo">
+      <label>Téléphone</label>
+      <input id="su-phone" placeholder="+228 90 00 00 00">
+      <label>Email (pour te connecter)</label>
+      <input id="su-email" type="email" placeholder="toi@exemple.com">
+      <label>Mot de passe</label>
+      <input id="su-password" type="password" placeholder="6 caractères minimum">
+      <label>Code d'invitation d'équipe (optionnel)</label>
+      <input id="su-invite" placeholder="Laisser vide si vous créez une nouvelle entreprise">
+    </div>
+
+    <div id="login-fields" style="display:none;">
+      <label>Email</label>
+      <input id="li-email" type="email" placeholder="toi@exemple.com">
+      <label>Mot de passe</label>
+      <input id="li-password" type="password" placeholder="Votre mot de passe">
+      <div style="text-align:right;margin-top:8px;">
+        <a id="forgot-password-link" style="font-size:12px;color:var(--forest);cursor:pointer;font-weight:600;">Mot de passe oublié ?</a>
+      </div>
+    </div>
+
+    <div class="err" id="auth-err"></div>
+    <div class="err" id="auth-msg" style="color:var(--forest-dark);"></div>
+    <button class="btn-primary" id="auth-submit">Créer mon compte</button>
+    <div class="toggle-row" id="toggle-row">Déjà inscrit ? <a id="toggle-link">Se connecter</a></div>
+  </div>
+</div>
+
+<!-- ============ APP SCREEN ============ -->
+<div id="app-screen">
+  <div class="shell">
+    <div class="mobile-topbar">
+      <div class="brand" style="display:flex;align-items:center;gap:8px;"><div class="chain-dot amber" style="width:8px;height:8px;"></div>ReferralHub</div>
+      <button class="hamburger" id="hamburger-btn">☰</button>
+    </div>
+    <div class="sidebar" id="sidebar">
+      <div class="brand"><div class="chain-dot amber"></div>ReferralHub</div>
+      <div class="company-name" id="sb-company-wrap" style="display:flex;align-items:center;gap:8px;margin-bottom:28px;">
+        <div id="sb-logo" style="width:22px;height:22px;border-radius:50%;background:var(--amber-soft);flex-shrink:0;overflow:hidden;"></div>
+        <span id="sb-company">—</span>
+      </div>
+      <div class="nav-item active" data-view="dashboard">📊 Tableau de bord</div>
+      <div class="nav-item" data-view="clients">👥 Clients</div>
+      <div class="nav-item" data-view="campaigns">🎯 Campagne</div>
+      <div class="nav-item" data-view="referrals">🔗 Parrains & recommandations</div>
+      <div class="nav-item" data-view="rewards">🎁 Récompenses</div>
+      <div class="nav-item" data-view="settings">⚙️ Paramètres</div>
+      <div class="nav-item" data-view="subscription">💳 Abonnement</div>
+      <div class="nav-item" data-view="team" id="nav-team">👥 Équipe</div>
+      <div class="nav-item" data-view="admin" id="nav-admin" style="display:none;">🛡️ Admin</div>
+      <div class="nav-spacer"></div>
+      <div class="logout" id="logout-btn">← Se déconnecter</div>
+    </div>
+    <div class="menu-backdrop" id="menu-backdrop"></div>
+    <div class="main" id="main-content"></div>
+  </div>
+</div>
+
+<!-- ============ PUBLIC REFERRAL SCREEN ============ -->
+<div id="public-screen">
+  <div class="public-wrap" id="public-wrap"></div>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal" id="modal-inner"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+
+/* ======================= SUPABASE CLIENT ======================= */
+const SUPABASE_URL = 'https://lqifssycawzfxxtmtryg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_uru7PJoy8ctmDIYZzZmYfA_RJYEfwGJ';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+const genCode = (name) => (name.split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g,'') + uid().slice(0,4));
+const fullLink = (code) => window.location.origin + window.location.pathname + '#/r/' + code;
+function waLink(client){
+  const campaign = client.campaignId ? companyData.campaigns.find(c => c.id === client.campaignId) : null;
+  const link = fullLink(client.referralCode);
+  let msg;
+  if(campaign && campaign.share_message){
+    msg = campaign.share_message
+      .replaceAll('{lien}', link)
+      .replaceAll('{recompense}', campaign.reward_detail || '')
+      .replaceAll('{entreprise}', company.name);
+  } else if(campaign){
+    msg = `Bonjour 👋 Je vous recommande ${company.name}. En passant par mon lien, vous m'aidez et je reçois ${campaign.reward_detail} en retour 🙏 Découvrez-les ici : ${link}`;
+  } else {
+    msg = `Bonjour 👋 Je vous recommande ${company.name}. Découvrez-les ici : ${link}`;
+  }
+  return 'https://wa.me/?text=' + encodeURIComponent(msg);
+}
+function fmtFCFA(n){ return Number(n||0).toLocaleString('fr-FR') + ' F'; }
+function exportCSV(filename, headers, rows){
+  const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [headers.map(escape).join(','), ...rows.map(r => r.map(escape).join(','))].join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function isPremiumPlan(){
+  const sub = companyData && companyData.subscription;
+  if(!sub) return false;
+  return ['trial','active'].includes(sub.subscription_status) && ['pro','business'].includes(sub.plan);
+}
+
+/* ======================= SESSION / STATE ======================= */
+let session = { authUser: null, companyId: null, role: null };
+let company = null;        // full row from `companies`
+let companyData = null;    // { clients:[], campaigns:[], referrals:[] } assembled from several tables
+let currentView = 'dashboard';
+
+/* ======================= INIT / ROUTING ======================= */
+let modalHistoryPushed = false;
+
+function pushViewState(view){
+  history.pushState({ type: 'view', view }, '', '#' + view);
+}
+function replaceViewState(view){
+  history.replaceState({ type: 'view', view }, '', '#' + view);
+}
+
+window.addEventListener('popstate', (e) => {
+  // 1) A modal is open — back button closes it first, like a native app.
+  const modalOpen = document.getElementById('modal-bg').classList.contains('show');
+  if(modalOpen){
+    document.getElementById('modal-bg').classList.remove('show');
+    modalHistoryPushed = false;
+    return;
+  }
+  // 2) Otherwise, go back to whichever screen the browser history points to.
+  const state = e.state;
+  if(state && state.type === 'view' && session.companyId){
+    currentView = state.view;
+    renderNav();
+    renderView();
+    if(window.innerWidth <= 860){
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('menu-backdrop').classList.remove('open');
+    }
+  }
+});
+
+async function init(){
+  const hash = window.location.hash;
+  const m = hash.match(/^#\/r\/(.+)$/);
+  if(m){
+    await renderPublicPage(m[1]);
+    return;
+  }
+  // Try to resume an existing Supabase session
+  const { data: { session: existing } } = await sb.auth.getSession();
+  if(existing){
+    session.authUser = existing.user;
+    const { data: userRow } = await sb.from('users').select('company_id, role').eq('auth_id', existing.user.id).maybeSingle();
+    if(userRow){
+      const { data: co } = await sb.from('companies').select('*').eq('id', userRow.company_id).maybeSingle();
+      if(co){
+        company = co;
+        session.companyId = co.id;
+        session.role = userRow.role;
+        await enterApp();
+        return;
+      }
+    }
+  }
+  renderAuthScreen();
+}
+
+/* ======================= AUTH SCREEN ======================= */
+let authMode = 'signup';
+
+function renderAuthScreen(){
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('public-screen').style.display = 'none';
+}
+
+document.getElementById('toggle-link').addEventListener('click', () => {
+  authMode = authMode === 'signup' ? 'login' : 'signup';
+  const isSignup = authMode === 'signup';
+  document.getElementById('auth-title').textContent = isSignup ? 'Créer votre compte' : 'Bon retour';
+  document.getElementById('auth-sub').textContent = isSignup ? "Gérez votre programme de recommandation ReferralHub." : "Connectez-vous à votre espace entreprise.";
+  document.getElementById('signup-fields').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('login-fields').style.display = isSignup ? 'none' : 'block';
+  document.getElementById('auth-submit').textContent = isSignup ? 'Créer mon compte' : 'Se connecter';
+  document.getElementById('toggle-row').innerHTML = isSignup
+    ? 'Déjà inscrit ? <a id="toggle-link2">Se connecter</a>'
+    : "Pas encore de compte ? <a id='toggle-link2'>S'inscrire</a>";
+  document.getElementById('auth-err').textContent = '';
+  document.getElementById('auth-msg').textContent = '';
+  rebindToggle();
+});
+function rebindToggle(){
+  const el = document.getElementById('toggle-link2');
+  if(el) el.addEventListener('click', () => document.getElementById('toggle-link').dispatchEvent(new Event('click')));
+}
+
+document.getElementById('forgot-password-link').addEventListener('click', async () => {
+  const email = document.getElementById('li-email').value.trim();
+  const errEl = document.getElementById('auth-err');
+  const msgEl = document.getElementById('auth-msg');
+  errEl.textContent = ''; msgEl.textContent = '';
+  if(!email){ errEl.textContent = "Entrez d'abord votre email ci-dessus, puis cliquez à nouveau."; return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email);
+  if(error){ errEl.textContent = error.message; return; }
+  msgEl.textContent = "Si un compte existe avec cet email, un lien de réinitialisation vient d'être envoyé.";
+});
+
+document.getElementById('auth-submit').addEventListener('click', async () => {
+  const errEl = document.getElementById('auth-err');
+  const msgEl = document.getElementById('auth-msg');
+  errEl.textContent = ''; msgEl.textContent = '';
+
+  if(authMode === 'signup'){
+    const name = document.getElementById('su-name').value.trim();
+    const sector = document.getElementById('su-sector').value.trim();
+    const location = document.getElementById('su-location').value.trim();
+    const phone = document.getElementById('su-phone').value.trim();
+    const email = document.getElementById('su-email').value.trim();
+    const password = document.getElementById('su-password').value;
+    const inviteCode = document.getElementById('su-invite').value.trim();
+    if(!email || !password || (!inviteCode && !name)){ errEl.textContent = "Email, mot de passe, et nom d'entreprise (ou code d'invitation) sont requis."; return; }
+    if(password.length < 6){ errEl.textContent = "Le mot de passe doit faire au moins 6 caractères."; return; }
+
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if(error){ errEl.textContent = error.message; return; }
+
+    if(!data.session){
+      msgEl.textContent = "Compte créé ✓ Vérifiez votre email pour confirmer votre adresse, puis connectez-vous.";
+      return;
+    }
+    session.authUser = data.user;
+
+    if(inviteCode){
+      // Joining an existing company as staff
+      const { data: invite, error: invErr } = await sb.from('company_invites')
+        .select('*').eq('code', inviteCode).is('used_by', null).maybeSingle();
+      if(invErr || !invite){ errEl.textContent = "Code d'invitation invalide ou déjà utilisé."; return; }
+
+      const { data: userRow, error: userErr } = await sb.from('users')
+        .insert({ auth_id: data.user.id, company_id: invite.company_id, role: 'staff', email })
+        .select().single();
+      if(userErr){ errEl.textContent = "Erreur lors de la finalisation du compte : " + userErr.message; return; }
+      await sb.from('company_invites').update({ used_by: userRow.id, used_at: new Date().toISOString() }).eq('id', invite.id);
+
+      const { data: co, error: coErr } = await sb.from('companies').select('*').eq('id', invite.company_id).single();
+      if(coErr){ errEl.textContent = coErr.message; return; }
+      company = co;
+      session.companyId = co.id;
+      session.role = 'staff';
+      await enterApp();
+      return;
+    }
+
+    const { data: co, error: coErr } = await sb.from('companies')
+      .insert({ owner_user_id: data.user.id, name, sector, location, phone })
+      .select().single();
+    if(coErr){ errEl.textContent = coErr.message; return; }
+    const { error: userErr } = await sb.from('users').insert({ auth_id: data.user.id, company_id: co.id, role: 'owner', email });
+    if(userErr){ errEl.textContent = "Erreur lors de la finalisation du compte : " + userErr.message; return; }
+
+    company = co;
+    session.companyId = co.id;
+    session.role = 'owner';
+    await enterApp();
+
+  } else {
+    const email = document.getElementById('li-email').value.trim();
+    const password = document.getElementById('li-password').value;
+    if(!email || !password){ errEl.textContent = "Email et mot de passe requis."; return; }
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ errEl.textContent = error.message; return; }
+    session.authUser = data.user;
+
+    const { data: userRow } = await sb.from('users').select('company_id, role').eq('auth_id', data.user.id).maybeSingle();
+    if(!userRow){ errEl.textContent = "Aucune entreprise associée à ce compte."; return; }
+    const { data: co, error: coErr } = await sb.from('companies').select('*').eq('id', userRow.company_id).maybeSingle();
+    if(coErr || !co){ errEl.textContent = "Aucune entreprise associée à ce compte."; return; }
+    company = co;
+    session.companyId = co.id;
+    session.role = userRow.role;
+    await enterApp();
+  }
+});
+
+async function fetchCompanyData(){
+  const companyId = session.companyId;
+  const [{ data: customers }, { data: campaigns }, { data: referrers }] = await Promise.all([
+    sb.from('customers').select('*').eq('company_id', companyId).order('created_at'),
+    sb.from('campaigns').select('*').eq('company_id', companyId).order('created_at'),
+    sb.from('referrers').select('*').eq('company_id', companyId),
+  ]);
+
+  const referrerIds = (referrers || []).map(r => r.id);
+  let links = [];
+  if(referrerIds.length){
+    const { data } = await sb.from('referral_links').select('*').in('referrer_id', referrerIds);
+    links = data || [];
+  }
+
+  const { data: referrals } = await sb.from('referrals').select('*').eq('company_id', companyId).order('created_at');
+  const referralIds = (referrals || []).map(r => r.id);
+
+  let conversions = [], rewards = [];
+  if(referralIds.length){
+    const [{ data: cv }, { data: rw }] = await Promise.all([
+      sb.from('conversions').select('*').in('referral_id', referralIds),
+      sb.from('rewards').select('*').in('referral_id', referralIds),
+    ]);
+    conversions = cv || []; rewards = rw || [];
+  }
+
+  // Assemble clients[] in the UI shape: one row per customer, with referrer/link info merged in.
+  const clients = (customers || []).map(c => {
+    const referrer = (referrers || []).find(r => r.customer_id === c.id);
+    const link = referrer ? links.find(l => l.referrer_id === referrer.id) : null;
+    return {
+      id: c.id, name: c.name, phone: c.phone, active: c.active,
+      isReferrer: !!referrer, referrerId: referrer ? referrer.id : null,
+      referralLinkId: link ? link.id : null, referralCode: link ? link.code : null,
+      linkActive: link ? link.active : false, campaignId: link ? link.campaign_id : null,
+      linkClicks: link ? link.clicks : 0,
+    };
+  });
+
+  const referralsFull = (referrals || []).map(r => {
+    const conv = conversions.find(c => c.referral_id === r.id);
+    const reward = rewards.find(rw => rw.referral_id === r.id);
+    const link = links.find(l => l.id === r.referral_link_id);
+    const referrer = link ? (referrers || []).find(rf => rf.id === link.referrer_id) : null;
+    return {
+      id: r.id, referrerCustomerId: referrer ? referrer.id : null,
+      prospectName: r.prospect_name, prospectPhone: r.prospect_phone,
+      status: reward ? reward.status : r.status,  // 'lead' | 'converted' -> 'payable' | 'paid' once a reward exists
+      campaignId: reward ? reward.campaign_id : null,
+      saleAmount: conv ? conv.sale_amount : null,
+      rewardAmount: reward ? reward.reward_amount : null,
+      rewardType: reward ? reward.reward_type : null,
+      rewardDetail: reward ? reward.reward_detail : null,
+      createdAt: r.created_at,
+      confirmedAt: conv ? conv.confirmed_at : null,
+    };
+  });
+
+  const { data: subscription } = await sb.from('subscriptions').select('*').eq('company_id', companyId).maybeSingle();
+
+  companyData = { clients, campaigns: campaigns || [], referrals: referralsFull, subscription: subscription || null };
+}
+
+async function ensureUserRowExists(){
+  if(!session.authUser) return;
+  const { data: existing } = await sb.from('users').select('id, role').eq('auth_id', session.authUser.id).maybeSingle();
+  if(!existing){
+    await sb.from('users').insert({ auth_id: session.authUser.id, company_id: company.id, role: 'owner', email: session.authUser.email });
+    session.role = 'owner';
+  } else {
+    session.role = existing.role;
+  }
+}
+
+async function enterApp(){
+  await ensureUserRowExists();
+  await fetchCompanyData();
+  const { data: adminRow } = await sb.from('platform_admins').select('id').eq('auth_id', session.authUser.id).maybeSingle();
+  session.isAdmin = !!adminRow;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  document.getElementById('sb-company').textContent = company.name;
+  document.getElementById('sb-logo').innerHTML = company.logo_url ? `<img src="${company.logo_url}" style="width:100%;height:100%;object-fit:cover;">` : '';
+  currentView = 'dashboard';
+  replaceViewState('dashboard');
+  renderNav();
+  renderView();
+}
+
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  session = { authUser: null, companyId: null };
+  company = null; companyData = null;
+  document.getElementById('app-screen').style.display = 'none';
+  renderAuthScreen();
+});
+
+/* ======================= NAV ======================= */
+function renderNav(){
+  document.getElementById('nav-team').style.display = session.role === 'owner' ? 'flex' : 'none';
+  document.getElementById('nav-admin').style.display = session.isAdmin ? 'flex' : 'none';
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === currentView);
+    el.onclick = () => {
+      currentView = el.dataset.view;
+      pushViewState(currentView);
+      renderNav(); renderView();
+      if(window.innerWidth <= 860){
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('menu-backdrop').classList.remove('open');
+      }
+    };
+  });
+}
+document.getElementById('hamburger-btn').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('menu-backdrop').classList.toggle('open');
+});
+document.getElementById('menu-backdrop').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('menu-backdrop').classList.remove('open');
+});
+
+/* ======================= VIEWS ======================= */
+function renderContentHeaderHTML(){
+  const logo = company.logo_url ? `<img src="${company.logo_url}">` : (company.name ? company.name[0].toUpperCase() : '?');
+  const subParts = [company.sector, company.location].filter(Boolean).join(' · ');
+  return `
+    <div class="content-header">
+      <div class="ch-logo">${logo}</div>
+      <div>
+        <div class="ch-name">${company.name}</div>
+        <div class="ch-sub">${subParts || 'Complétez votre profil dans Paramètres'}</div>
+      </div>
+      <div class="ch-spacer"></div>
+      <div class="ch-badge">Compte actif</div>
+    </div>
+  `;
+}
+
+function renderView(){
+  const main = document.getElementById('main-content');
+  main.innerHTML = renderContentHeaderHTML() + '<div id="view-body"></div>';
+  const body = document.getElementById('view-body');
+  if(currentView === 'dashboard') return renderDashboard(body);
+  if(currentView === 'clients') return renderClients(body);
+  if(currentView === 'campaigns') return renderCampaigns(body);
+  if(currentView === 'referrals') return renderReferrals(body);
+  if(currentView === 'rewards') return renderRewards(body);
+  if(currentView === 'settings') return renderSettings(body);
+  if(currentView === 'subscription') return renderSubscription(body);
+  if(currentView === 'team') return renderTeam(body);
+  if(currentView === 'admin') return renderAdmin(body);
+}
+
+/* ---- Dashboard ---- */
+let dashboardCharts = {};
+
+function renderDashboard(main){
+  const clients = companyData.clients.filter(c => c.active !== false);
+  const referrers = clients.filter(c => c.isReferrer);
+  const referrals = companyData.referrals;
+  const newClients = referrals.filter(r => ['converted','payable','paid'].includes(r.status));
+  const revenue = newClients.reduce((s,r) => s + (Number(r.saleAmount)||0), 0);
+  const rewardsDistributed = referrals.filter(r => r.status === 'paid').reduce((s,r) => s + (Number(r.rewardAmount)||0), 0);
+
+  main.innerHTML = `
+    <h2>Tableau de bord</h2>
+    <div class="subhead">${company.name} — vue d'ensemble de votre programme</div>
+    <div class="stat-grid">
+      ${stat(clients.length, 'Clients')}
+      ${stat(referrers.length, 'Parrains actifs')}
+      ${stat(referrals.length, 'Recommandations')}
+      ${stat(newClients.length, 'Nouveaux clients')}
+      ${stat(fmtFCFA(revenue), 'Ventes attribuées')}
+      ${stat(fmtFCFA(rewardsDistributed), 'Récompenses versées')}
+    </div>
+    ${referrals.length === 0 ? '' : `
+    <div class="chart-grid">
+      <div class="panel"><div class="panel-header"><h3>Ventes attribuées dans le temps</h3></div><div class="chart-box"><canvas id="revenue-chart"></canvas></div></div>
+      <div class="panel"><div class="panel-header"><h3>Entonnoir des recommandations</h3></div><div class="chart-box"><canvas id="funnel-chart"></canvas></div></div>
+    </div>`}
+    <div class="panel">
+      <div class="panel-header"><h3>🏆 Top parrains</h3></div>
+      ${renderTopReferrers()}
+    </div>
+    ${isPremiumPlan() ? `
+    <div class="panel">
+      <div class="panel-header"><h3>🤖 Analyse IA de vos performances</h3><button class="btn-sm" id="ai-insights-btn">Analyser</button></div>
+      <div id="ai-insights-body"><div class="empty">Cliquez sur "Analyser" pour obtenir des recommandations basées sur vos données.</div></div>
+    </div>` : `
+    <div class="panel">
+      <div class="panel-header"><h3>🔒 Analyse IA de vos performances</h3></div>
+      <p style="font-size:13px;color:#5b6b64;">Disponible avec les plans Pro et Business : des recommandations générées par l'IA à partir de vos propres statistiques (quelle campagne convertit le mieux, quels parrains relancer...).</p>
+      <button class="btn-sm" id="ai-insights-upsell">Voir les plans</button>
+    </div>`}
+  `;
+  if(referrals.length > 0) renderDashboardCharts(referrals, clients);
+  if(isPremiumPlan()){
+    document.getElementById('ai-insights-btn').onclick = () => runAIInsights(clients, referrers, referrals);
+  } else {
+    document.getElementById('ai-insights-upsell').onclick = () => {
+      currentView = 'subscription'; pushViewState(currentView); renderNav(); renderView();
+    };
+  }
+}
+function stat(num,label){ return `<div class="stat-card"><div class="num">${num}</div><div class="label">${label}</div></div>`; }
+
+function renderDashboardCharts(referrals, clients){
+  if(dashboardCharts.revenue) dashboardCharts.revenue.destroy();
+  if(dashboardCharts.funnel) dashboardCharts.funnel.destroy();
+
+  // --- Revenue over time (by day, based on confirmed sale date) ---
+  const byDay = {};
+  referrals.forEach(r => {
+    if(r.confirmedAt && r.saleAmount){
+      const day = r.confirmedAt.slice(0,10);
+      byDay[day] = (byDay[day] || 0) + Number(r.saleAmount);
+    }
+  });
+  const days = Object.keys(byDay).sort();
+  const revenueCtx = document.getElementById('revenue-chart');
+  if(revenueCtx){
+    if(days.length === 0){
+      revenueCtx.closest('.chart-box').innerHTML = `<div class="empty">Pas encore de vente confirmée pour tracer une courbe.</div>`;
+    } else {
+      dashboardCharts.revenue = new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+          labels: days.map(d => new Date(d).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' })),
+          datasets: [{
+            data: days.map(d => byDay[d]),
+            borderColor: '#2F6F5E', backgroundColor: 'rgba(47,111,94,0.12)',
+            tension: 0.3, fill: true, pointBackgroundColor: '#2F6F5E',
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: { y: { ticks: { callback: v => v.toLocaleString('fr-FR') + ' F' } } }
+        }
+      });
+    }
+  }
+
+  // --- Funnel: clics -> lead -> client converti -> à payer -> payée ---
+  const totalClicks = clients.filter(c => c.isReferrer).reduce((s,c) => s + (c.linkClicks || 0), 0);
+  const stages = [
+    { key: '__clicks', label: 'Clics sur le lien' },
+    { key: 'lead', label: 'Lead (contact laissé)' },
+    { key: 'converted', label: 'Client (achat confirmé)' },
+    { key: 'payable', label: 'Récompense à payer' },
+    { key: 'paid', label: 'Récompense payée' },
+  ];
+  const funnelCtx = document.getElementById('funnel-chart');
+  if(funnelCtx){
+    dashboardCharts.funnel = new Chart(funnelCtx, {
+      type: 'bar',
+      data: {
+        labels: stages.map(s => s.label),
+        datasets: [{
+          data: stages.map(s => s.key === '__clicks' ? totalClicks : referrals.filter(r => r.status === s.key).length),
+          backgroundColor: ['#8a978f','#DCEDE7','#2F6F5E','#F1DFC3','#C98A3E'],
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: { x: { ticks: { precision: 0 } } }
+      }
+    });
+  }
+}
+
+function renderTopReferrers(){
+  const counts = {};
+  companyData.referrals.forEach(r => {
+    if(['converted','payable','paid'].includes(r.status) && r.referrerCustomerId){
+      counts[r.referrerCustomerId] = (counts[r.referrerCustomerId]||0) + 1;
+    }
+  });
+  const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if(rows.length === 0) return `<div class="empty">Aucune conversion pour l'instant. Les premiers parrainages confirmés apparaîtront ici.</div>`;
+  return `<table><thead><tr><th>Parrain</th><th>Nouveaux clients</th></tr></thead><tbody>
+    ${rows.map(([id,count]) => {
+      const c = companyData.clients.find(cl => cl.id === id);
+      return `<tr><td>${c ? c.name : '—'}</td><td>${count}</td></tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+
+async function runAIInsights(clients, referrers, referrals){
+  const key = await getGeminiKey();
+  if(!key) return;
+  const body = document.getElementById('ai-insights-body');
+  body.innerHTML = `<div class="empty">⏳ Analyse en cours...</div>`;
+
+  // Build a compact, campaign-level performance summary (no personal data sent).
+  const perCampaign = {};
+  referrals.forEach(r => {
+    if(!r.campaignId) return;
+    const c = companyData.campaigns.find(cc => cc.id === r.campaignId);
+    if(!c) return;
+    perCampaign[c.name] = perCampaign[c.name] || { leads: 0, converted: 0, revenue: 0 };
+    if(r.status === 'lead') perCampaign[c.name].leads++;
+    if(['converted','payable','paid'].includes(r.status)){
+      perCampaign[c.name].converted++;
+      perCampaign[c.name].revenue += Number(r.saleAmount) || 0;
+    }
+  });
+  const summary = {
+    total_clients: clients.length,
+    total_referrers: referrers.length,
+    total_referrals: referrals.length,
+    leads_en_attente: referrals.filter(r => r.status === 'lead').length,
+    clients_convertis: referrals.filter(r => ['converted','payable','paid'].includes(r.status)).length,
+    campagnes: perCampaign,
+  };
+
+  try{
+    const text = await callGemini(key,
+      `Voici les statistiques anonymisées d'un programme de recommandation client (SaaS ReferralHub) : ${JSON.stringify(summary)}. ` +
+      `En français, donne 3 à 4 recommandations courtes et concrètes (une par ligne, commençant par "•") pour aider ce commerçant à améliorer ses résultats. ` +
+      `Sois direct et pratique, pas de généralités, appuie-toi sur les chiffres fournis. Si les données sont trop limitées pour conclure, dis-le simplement.`
+    );
+    body.innerHTML = `<div style="white-space:pre-line;font-size:14px;line-height:1.6;">${text.trim()}</div>`;
+  }catch(err){
+    body.innerHTML = `<div class="empty" style="color:var(--red);">Échec de l'analyse : ${err.message}</div>`;
+  }
+}
+
+/* ---- Clients ---- */
+function renderClients(main){
+  const clients = companyData.clients;
+  main.innerHTML = `
+    <h2>Clients</h2>
+    <div class="subhead">La base de vos clients. Un client peut devenir parrain avec son accord.</div>
+    <div class="panel">
+      <div class="panel-header"><h3>Tous les clients (${clients.length})</h3><div style="display:flex;gap:8px;"><button class="btn-sm" id="export-clients-btn">⬇️ Exporter CSV</button><button class="btn-sm" id="add-client-btn">+ Ajouter un client</button></div></div>
+      ${clients.length === 0 ? `<div class="empty">Aucun client pour l'instant. Ajoutez votre premier client.</div>` : `
+      <div class="table-scroll"><table><thead><tr><th>Nom</th><th>Téléphone</th><th>Statut</th><th>Lien de parrainage</th><th></th></tr></thead><tbody>
+        ${clients.map(c => `
+          <tr style="${c.active === false ? 'opacity:0.55;' : ''}">
+            <td>${c.name}</td>
+            <td>${c.phone}</td>
+            <td>${c.active === false ? '<span class="pill prospect">Supprimé</span>' : (c.isReferrer ? '<span class="pill client">Parrain</span>' : '<span class="pill prospect">Client</span>')}</td>
+            <td>${c.isReferrer ? `<span class="code-badge">${fullLink(c.referralCode)}</span><br><span style="font-size:11px;color:#8a978f;">${c.linkClicks || 0} clic(s)</span>` : '—'}</td>
+            <td style="white-space:nowrap;">
+              ${c.active === false
+                ? `<button class="btn-sm" data-restore-client="${c.id}">Restaurer</button>`
+                : `
+                  ${c.isReferrer ? `<a class="btn-sm" style="text-decoration:none;display:inline-block;" target="_blank" href="${waLink(c)}">📲</a>` : `<button class="btn-sm" data-make-referrer="${c.id}">Inviter à parrainer</button>`}
+                  <button class="btn-sm" data-edit-client="${c.id}">Modifier</button>
+                  <button class="btn-sm" style="border-color:var(--red);color:var(--red);" data-delete-client="${c.id}">Supprimer</button>
+                `}
+            </td>
+          </tr>
+        `).join('')}
+      </tbody></table></div>`}
+    </div>
+  `;
+  document.getElementById('add-client-btn').onclick = () => openAddClientModal();
+  document.getElementById('export-clients-btn').onclick = () => {
+    exportCSV(`clients-${company.name}.csv`,
+      ['Nom', 'Téléphone', 'Statut', 'Est parrain', 'Lien de parrainage'],
+      clients.map(c => [
+        c.name, c.phone,
+        c.active === false ? 'Supprimé' : 'Actif',
+        c.isReferrer ? 'Oui' : 'Non',
+        c.isReferrer ? fullLink(c.referralCode) : '',
+      ])
+    );
+  };
+  main.querySelectorAll('[data-make-referrer]').forEach(btn => {
+    btn.onclick = () => openMakeReferrerModal(btn.dataset.makeReferrer);
+  });
+  main.querySelectorAll('[data-edit-client]').forEach(btn => {
+    btn.onclick = () => openEditClientModal(btn.dataset.editClient);
+  });
+  main.querySelectorAll('[data-delete-client]').forEach(btn => {
+    btn.onclick = () => openDeleteClientModal(btn.dataset.deleteClient);
+  });
+  main.querySelectorAll('[data-restore-client]').forEach(btn => {
+    btn.onclick = async () => {
+      const client = companyData.clients.find(c => c.id === btn.dataset.restoreClient);
+      await sb.from('customers').update({ active: true }).eq('id', btn.dataset.restoreClient);
+      if(client && client.referralLinkId){
+        await sb.from('referral_links').update({ active: true }).eq('id', client.referralLinkId);
+      }
+      await fetchCompanyData(); renderView();
+    };
+  });
+}
+
+async function makeReferrer(customerId, campaignId){
+  const client = companyData.clients.find(c => c.id === customerId);
+  const { data: referrer, error: refErr } = await sb.from('referrers')
+    .insert({ customer_id: customerId, company_id: session.companyId, active: true })
+    .select().single();
+  if(refErr) return refErr;
+  const code = genCode(client.name);
+  const { error: linkErr } = await sb.from('referral_links').insert({ referrer_id: referrer.id, code, active: true, campaign_id: campaignId || null });
+  return linkErr || null;
+}
+
+function openMakeReferrerModal(customerId){
+  const campaigns = companyData.campaigns.filter(isCampaignUsable);
+  showModal(`
+    <h3>Inviter à parrainer</h3>
+    <label>Campagne associée à son lien</label>
+    <select id="mr-campaign">
+      ${campaigns.length === 0
+        ? `<option value="">Aucune campagne — message générique</option>`
+        : campaigns.map(c => `<option value="${c.id}">${c.name} — ${c.reward_detail}</option>`).join('')}
+    </select>
+    <div class="err" id="mr-err"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="mr-cancel">Annuler</button>
+      <button class="btn-primary" id="mr-save">Créer le lien</button>
+    </div>
+  `);
+  document.getElementById('mr-cancel').onclick = closeModal;
+  document.getElementById('mr-save').onclick = async () => {
+    const campaignId = document.getElementById('mr-campaign').value || null;
+    const err = await makeReferrer(customerId, campaignId);
+    if(err){ document.getElementById('mr-err').textContent = err.message; return; }
+    await fetchCompanyData();
+    closeModal();
+    renderView();
+  };
+}
+
+function openAddClientModal(){
+  showModal(`
+    <h3>Ajouter un client</h3>
+    <label>Nom</label><input id="mc-name" placeholder="Patrick Adjovi">
+    <label>Téléphone</label><input id="mc-phone" placeholder="90 XX XX XX">
+    <label style="display:flex;align-items:center;gap:8px;margin-top:18px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink);">
+      <input type="checkbox" id="mc-referrer" style="width:auto;">
+      En faire un parrain tout de suite (génère son lien de recommandation)
+    </label>
+    <div id="mc-campaign-wrap" style="display:none;">
+      <label>Campagne associée à son lien</label>
+      <select id="mc-campaign">
+        ${companyData.campaigns.filter(isCampaignUsable).length === 0
+          ? `<option value="">Aucune campagne — message générique</option>`
+          : companyData.campaigns.filter(isCampaignUsable).map(c => `<option value="${c.id}">${c.name} — ${c.reward_detail}</option>`).join('')}
+      </select>
+    </div>
+    <div class="err" id="mc-err"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="mc-cancel">Annuler</button>
+      <button class="btn-primary" id="mc-save">Ajouter</button>
+    </div>
+  `);
+  document.getElementById('mc-referrer').addEventListener('change', (e) => {
+    document.getElementById('mc-campaign-wrap').style.display = e.target.checked ? 'block' : 'none';
+  });
+  document.getElementById('mc-cancel').onclick = closeModal;
+  document.getElementById('mc-save').onclick = async () => {
+    const name = document.getElementById('mc-name').value.trim();
+    const phone = document.getElementById('mc-phone').value.trim();
+    const makeReferrerFlag = document.getElementById('mc-referrer').checked;
+    const campaignId = document.getElementById('mc-campaign') ? (document.getElementById('mc-campaign').value || null) : null;
+    if(!name || !phone) return;
+    const { data: client, error } = await sb.from('customers')
+      .insert({ company_id: session.companyId, name, phone, active: true })
+      .select().single();
+    if(error){ document.getElementById('mc-err').textContent = error.message.includes('duplicate') ? 'Ce numéro existe déjà.' : error.message; return; }
+    if(makeReferrerFlag){
+      const refErr = await makeReferrer(client.id, campaignId);
+      if(refErr){ document.getElementById('mc-err').textContent = "Client ajouté, mais échec de l'activation du parrainage : " + refErr.message; await fetchCompanyData(); renderView(); return; }
+    }
+    await fetchCompanyData();
+    closeModal();
+    renderView();
+  };
+}
+
+function openEditClientModal(clientId){
+  const client = companyData.clients.find(c => c.id === clientId);
+  showModal(`
+    <h3>Modifier le client</h3>
+    <label>Nom</label><input id="ec-name" value="${client.name}">
+    <label>Téléphone</label><input id="ec-phone" value="${client.phone}">
+    <div class="err" id="ec-err"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="ec-cancel">Annuler</button>
+      <button class="btn-primary" id="ec-save">Enregistrer</button>
+    </div>
+  `);
+  document.getElementById('ec-cancel').onclick = closeModal;
+  document.getElementById('ec-save').onclick = async () => {
+    const name = document.getElementById('ec-name').value.trim();
+    const phone = document.getElementById('ec-phone').value.trim();
+    if(!name || !phone) return;
+    const { error } = await sb.from('customers').update({ name, phone }).eq('id', clientId);
+    if(error){
+      document.getElementById('ec-err').textContent = error.message.includes('duplicate') ? 'Ce numéro est déjà utilisé par un autre client.' : error.message;
+      return;
+    }
+    await fetchCompanyData();
+    closeModal();
+    renderView();
+  };
+}
+
+function openDeleteClientModal(clientId){
+  const client = companyData.clients.find(c => c.id === clientId);
+  const hasHistory = companyData.referrals.some(r => r.referrerCustomerId === client.referrerId && client.referrerId);
+  showModal(`
+    <h3>Supprimer ${client.name} ?</h3>
+    <p style="font-size:13px;color:#5b6b64;">
+      ${hasHistory
+        ? "Ce client a des recommandations enregistrées. Son historique de parrainage sera conservé, mais son lien ne fonctionnera plus pour de nouveaux clients. Vous pourrez le restaurer à tout moment."
+        : "Le client sera retiré de votre liste active. Vous pourrez le restaurer à tout moment."}
+    </p>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="dc-cancel">Annuler</button>
+      <button class="btn-primary" style="background:var(--red);" id="dc-confirm">Supprimer</button>
+    </div>
+  `);
+  document.getElementById('dc-cancel').onclick = closeModal;
+  document.getElementById('dc-confirm').onclick = async () => {
+    await sb.from('customers').update({ active: false }).eq('id', clientId);
+    if(client.referralLinkId){
+      await sb.from('referral_links').update({ active: false }).eq('id', client.referralLinkId);
+    }
+    await fetchCompanyData();
+    closeModal();
+    renderView();
+  };
+}
+
+/* ---- Campaigns ---- */
+function campaignRewardsCount(campaignId){
+  return companyData.referrals.filter(r => r.campaignId === campaignId && ['payable','paid'].includes(r.status)).length;
+}
+function isCampaignUsable(c){
+  if(!c.active) return false;
+  const today = new Date().toISOString().slice(0,10);
+  if(c.start_date && today < c.start_date) return false;
+  if(c.end_date && today > c.end_date) return false;
+  if(c.max_rewards && campaignRewardsCount(c.id) >= c.max_rewards) return false;
+  return true;
+}
+
+function renderCampaigns(main){
+  const campaigns = companyData.campaigns;
+  main.innerHTML = `
+    <h2>Campagne de parrainage</h2>
+    <div class="subhead">Définissez la récompense offerte pour chaque nouveau client apporté.</div>
+    <div class="panel">
+      <div class="panel-header"><h3>Campagnes (${campaigns.length})</h3><button class="btn-sm" id="add-campaign-btn">+ Nouvelle campagne</button></div>
+      ${campaigns.length === 0 ? `<div class="empty">Aucune campagne. Créez votre première campagne de parrainage.</div>` : `
+      <div class="table-scroll"><table><thead><tr><th>Nom</th><th>Récompense</th><th>Durée</th><th>Progression</th><th>Statut</th><th></th></tr></thead><tbody>
+        ${campaigns.map(c => {
+          const count = campaignRewardsCount(c.id);
+          const dateRange = (c.start_date || c.end_date) ? `${c.start_date ? new Date(c.start_date).toLocaleDateString('fr-FR') : '…'} → ${c.end_date ? new Date(c.end_date).toLocaleDateString('fr-FR') : '…'}` : '—';
+          return `
+          <tr><td>${c.name}</td><td>${rewardTypeLabel(c.reward_type)} — ${c.reward_detail}</td><td style="font-size:12px;">${dateRange}</td>
+          <td>${c.max_rewards ? `${count} / ${c.max_rewards}` : `${count}`}</td>
+          <td>${isCampaignUsable(c) ? '<span class="pill client">Active</span>' : (c.active ? '<span class="pill lead">Hors période / épuisée</span>' : '<span class="pill prospect">Inactive</span>')}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn-sm" data-edit-campaign="${c.id}">Modifier</button>
+            <button class="btn-sm" data-toggle-campaign="${c.id}">${c.active ? 'Désactiver' : 'Activer'}</button>
+          </td></tr>
+        `;}).join('')}
+      </tbody></table></div>`}
+    </div>
+  `;
+  document.getElementById('add-campaign-btn').onclick = () => openCampaignModal(null);
+  main.querySelectorAll('[data-edit-campaign]').forEach(btn => {
+    btn.onclick = () => openCampaignModal(companyData.campaigns.find(c => c.id === btn.dataset.editCampaign));
+  });
+  main.querySelectorAll('[data-toggle-campaign]').forEach(btn => {
+    btn.onclick = async () => {
+      const c = companyData.campaigns.find(x => x.id === btn.dataset.toggleCampaign);
+      const { error } = await sb.from('campaigns').update({ active: !c.active }).eq('id', c.id);
+      if(error){ alert("Erreur : " + error.message); return; }
+      await fetchCompanyData();
+      renderView();
+    };
+  });
+}
+function rewardTypeLabel(t){
+  return { discount:'💰 Réduction', gift:'🎁 Cadeau', commission:'💵 Commission', points:'⭐ Points' }[t] || t;
+}
+function openCampaignModal(existing){
+  showModal(`
+    <h3>${existing ? 'Modifier la campagne' : 'Nouvelle campagne'}</h3>
+    <label>Nom de la campagne</label><input id="cc-name" placeholder="Parrainage d'août" value="${existing ? existing.name : ''}">
+    <label>Type de récompense</label>
+    <select id="cc-type">
+      <option value="discount" ${existing?.reward_type === 'discount' ? 'selected' : ''}>💰 Réduction</option>
+      <option value="gift" ${existing?.reward_type === 'gift' ? 'selected' : ''}>🎁 Cadeau</option>
+      <option value="commission" ${existing?.reward_type === 'commission' ? 'selected' : ''}>💵 Commission</option>
+      <option value="points" ${existing?.reward_type === 'points' ? 'selected' : ''}>⭐ Points</option>
+    </select>
+    <label>Détail (ex: "2000 F", "10%", "1 accessoire offert")</label>
+    <input id="cc-detail" placeholder="2000 F de réduction" value="${existing ? existing.reward_detail : ''}">
+    <div class="form-row">
+      <div><label>Date de début (optionnel)</label><input id="cc-start" type="date" value="${existing?.start_date || ''}"></div>
+      <div><label>Date de fin (optionnel)</label><input id="cc-end" type="date" value="${existing?.end_date || ''}"></div>
+    </div>
+    <div class="form-row">
+      <div><label>Achat minimum FCFA (optionnel)</label><input id="cc-min" type="number" placeholder="10000" value="${existing?.min_purchase || ''}"></div>
+      <div><label>Nb max de récompenses (optionnel)</label><input id="cc-max" type="number" placeholder="100" value="${existing?.max_rewards || ''}"></div>
+    </div>
+    <label>Message WhatsApp personnalisé (optionnel)</label>
+    <textarea id="cc-message" rows="3" placeholder="Bonjour 👋 Je recommande {entreprise} — passe par mon lien et je reçois {recompense} 🙏 {lien}">${existing?.share_message || ''}</textarea>
+    <p style="font-size:11px;color:#8a978f;margin-top:4px;">Utilisez {lien}, {recompense} et {entreprise} — ils seront remplacés automatiquement. Laissez vide pour un message généré automatiquement.</p>
+    <div class="err" id="cc-err"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cc-cancel">Annuler</button>
+      <button class="btn-primary" id="cc-save">${existing ? 'Enregistrer' : 'Créer'}</button>
+    </div>
+  `);
+  document.getElementById('cc-cancel').onclick = closeModal;
+  document.getElementById('cc-save').onclick = async () => {
+    const name = document.getElementById('cc-name').value.trim();
+    const reward_type = document.getElementById('cc-type').value;
+    const reward_detail = document.getElementById('cc-detail').value.trim();
+    const share_message = document.getElementById('cc-message').value.trim() || null;
+    const start_date = document.getElementById('cc-start').value || null;
+    const end_date = document.getElementById('cc-end').value || null;
+    const min_purchase = document.getElementById('cc-min').value ? Number(document.getElementById('cc-min').value) : null;
+    const max_rewards = document.getElementById('cc-max').value ? parseInt(document.getElementById('cc-max').value) : null;
+    if(!name || !reward_detail) return;
+    if(start_date && end_date && start_date > end_date){ document.getElementById('cc-err').textContent = "La date de fin doit être après la date de début."; return; }
+    const payload = { name, reward_type, reward_detail, share_message, start_date, end_date, min_purchase, max_rewards };
+    const { error } = existing
+      ? await sb.from('campaigns').update(payload).eq('id', existing.id)
+      : await sb.from('campaigns').insert({ company_id: session.companyId, ...payload, active: true });
+    if(error){ document.getElementById('cc-err').textContent = error.message; return; }
+    await fetchCompanyData();
+    closeModal();
+    renderView();
+  };
+}
+
+/* ---- Referrers & Referrals ---- */
+function renderReferrals(main){
+  const referrals = companyData.referrals;
+  main.innerHTML = `
+    <h2>Parrains & recommandations</h2>
+    <div class="subhead">Le parcours complet : clic → contact laissé → achat confirmé → récompense.</div>
+    <div class="panel">
+      <div class="panel-header"><h3>Recommandations (${referrals.length})</h3>${referrals.length ? `<button class="btn-sm" id="export-referrals-btn">⬇️ Exporter CSV</button>` : ''}</div>
+      ${referrals.length === 0 ? `<div class="empty">Aucune recommandation pour l'instant. Partagez un lien de parrainage depuis l'onglet Clients pour tester le parcours.</div>` : `
+      <div class="table-scroll"><table><thead><tr><th>Parrain</th><th>Prospect</th><th>Statut</th><th>Vente</th><th></th></tr></thead><tbody>
+        ${referrals.map(r => {
+          const referrer = companyData.clients.find(c => c.id === r.referrerCustomerId);
+          return `<tr>
+            <td>${referrer ? referrer.name : '—'}</td>
+            <td>${r.prospectName}<br><span class="mono" style="font-size:11px;color:#8a978f;">${r.prospectPhone}</span></td>
+            <td>${statusPill(r.status)}</td>
+            <td>${r.saleAmount ? fmtFCFA(r.saleAmount) : '—'}</td>
+            <td>${r.status === 'lead' ? `<button class="btn-sm" data-confirm-sale="${r.id}">Confirmer la vente</button>` : ''}</td>
+          </tr>`;
+        }).join('')}
+      </tbody></table></div>`}
+    </div>
+  `;
+  main.querySelectorAll('[data-confirm-sale]').forEach(btn => {
+    btn.onclick = () => openConfirmSaleModal(btn.dataset.confirmSale);
+  });
+  const exportRefBtn = document.getElementById('export-referrals-btn');
+  if(exportRefBtn) exportRefBtn.onclick = () => {
+    exportCSV(`recommandations-${company.name}.csv`,
+      ['Parrain', 'Prospect', 'Téléphone', 'Statut', 'Montant vente (FCFA)'],
+      referrals.map(r => {
+        const referrer = companyData.clients.find(c => c.id === r.referrerCustomerId);
+        return [referrer ? referrer.name : '', r.prospectName, r.prospectPhone, statusLabel(r.status), r.saleAmount || ''];
+      })
+    );
+  };
+}
+function statusLabel(status){
+  return { prospect: 'Prospect', lead: 'Lead', converted: 'Client', payable: 'Récompense à payer', paid: 'Récompense payée' }[status] || status;
+}
+function statusPill(status){
+  const map = {
+    prospect: ['prospect','🔵 Prospect'],
+    lead: ['lead','🟡 Lead'],
+    converted: ['client','🟢 Client'],
+    payable: ['payable','🎁 Récompense à payer'],
+    paid: ['paid','✅ Récompense payée'],
+  };
+  const [cls,label] = map[status] || ['prospect', status];
+  return `<span class="pill ${cls}">${label}</span>`;
+}
+function openConfirmSaleModal(referralId){
+  const campaigns = companyData.campaigns.filter(isCampaignUsable);
+  showModal(`
+    <h3>Confirmer la vente</h3>
+    <label>Campagne à appliquer</label>
+    <select id="cs-campaign">
+      ${campaigns.length === 0
+        ? `<option value="">Aucune campagne active</option>`
+        : campaigns.map(c => `<option value="${c.id}">${c.name} — ${rewardTypeLabel(c.reward_type)} (${c.reward_detail})</option>`).join('')}
+    </select>
+    <label>Montant de la vente (FCFA)</label>
+    <input id="cs-amount" type="number" placeholder="20000">
+    <div class="err" id="cs-err"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cs-cancel">Annuler</button>
+      <button class="btn-primary" id="cs-save">Confirmer</button>
+    </div>
+  `);
+  document.getElementById('cs-cancel').onclick = closeModal;
+  document.getElementById('cs-save').onclick = async () => {
+    const amount = Number(document.getElementById('cs-amount').value);
+    const campaignId = document.getElementById('cs-campaign').value || null;
+    if(!amount) return;
+    const campaign = companyData.campaigns.find(c => c.id === campaignId);
+    const rewardAmount = computeReward(campaign, amount);
+    const referral = companyData.referrals.find(r => r.id === referralId);
+    const errEl = document.getElementById('cs-err');
+
+    let belowMinimum = false;
+    if(campaign && campaign.min_purchase && amount < campaign.min_purchase){
+      const proceed = confirm(`Cette campagne exige un achat minimum de ${fmtFCFA(campaign.min_purchase)}. Ce montant (${fmtFCFA(amount)}) est inférieur — confirmer quand même sans appliquer la récompense de cette campagne ?`);
+      if(!proceed) return;
+      belowMinimum = true;
+    }
+
+    const { error: convErr } = await sb.from('conversions').insert({ referral_id: referralId, sale_amount: amount, currency: 'FCFA' });
+    if(convErr){ errEl.textContent = "Erreur : " + convErr.message; return; }
+
+    const { error: statusErr } = await sb.from('referrals').update({ status: 'converted' }).eq('id', referralId);
+    if(statusErr){ errEl.textContent = "Erreur : " + statusErr.message; return; }
+
+    if(campaign && !belowMinimum){
+      const { error: rewardErr } = await sb.from('rewards').insert({
+        referral_id: referralId, campaign_id: campaignId,
+        reward_type: campaign.reward_type, reward_detail: campaign.reward_detail,
+        reward_amount: rewardAmount, status: 'payable',
+      });
+      if(rewardErr){ errEl.textContent = "Vente enregistrée, mais échec du calcul de la récompense : " + rewardErr.message; await fetchCompanyData(); renderView(); return; }
+    }
+    // The referred person becomes a real customer, so the business can later
+    // invite them to refer their own friends — this is what keeps the network growing.
+    if(referral){
+      await sb.from('customers').insert({
+        company_id: session.companyId, name: referral.prospectName, phone: referral.prospectPhone, active: true,
+      }); // ignore error silently if this phone is already a customer somehow
+    }
+    await fetchCompanyData();
+    closeModal();
+    renderView();
+  };
+}
+function computeReward(campaign, saleAmount){
+  if(!campaign) return 0;
+  const raw = campaign.reward_detail || '';
+  const num = parseFloat(raw.replace(/[^\d.]/g, '')) || 0;
+  if(campaign.reward_type === 'commission') return Math.round(saleAmount * (num / 100));
+  if(campaign.reward_type === 'discount') return num;
+  return 0; // gift or points: no monetary value, detail text shown instead
+}
+
+/* ---- Rewards ---- */
+function renderRewards(main){
+  const referrals = companyData.referrals.filter(r => r.status === 'payable' || r.status === 'paid');
+  main.innerHTML = `
+    <h2>Récompenses</h2>
+    <div class="subhead">Récompenses calculées par ReferralHub — versées manuellement par vous au parrain.</div>
+    <div class="panel">
+      <div class="panel-header"><h3>À traiter (${referrals.length})</h3></div>
+      ${referrals.length === 0 ? `<div class="empty">Aucune récompense en attente. Elles apparaîtront ici après confirmation d'une vente.</div>` : `
+      <div class="table-scroll"><table><thead><tr><th>Parrain</th><th>Nouveau client</th><th>Récompense</th><th>Statut</th><th></th></tr></thead><tbody>
+        ${referrals.map(r => {
+          const referrer = companyData.clients.find(c => c.id === r.referrerCustomerId);
+          return `<tr>
+            <td>${referrer ? referrer.name : '—'}</td>
+            <td>${r.prospectName}</td>
+            <td>${rewardDisplay(r)}</td>
+            <td>${statusPill(r.status)}</td>
+            <td>${r.status === 'payable' ? `<button class="btn-sm amber" data-mark-paid="${r.id}">Marquer payé</button>` : ''}</td>
+          </tr>`;
+        }).join('')}
+      </tbody></table></div>`}
+    </div>
+  `;
+  main.querySelectorAll('[data-mark-paid]').forEach(btn => {
+    btn.onclick = async () => {
+      const { error } = await sb.from('rewards').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('referral_id', btn.dataset.markPaid);
+      if(error){ alert("Erreur : " + error.message); return; }
+      await fetchCompanyData();
+      renderView();
+    };
+  });
+}
+function rewardDisplay(r){
+  if(r.rewardType === 'gift' || r.rewardType === 'points') return r.rewardDetail;
+  return fmtFCFA(r.rewardAmount || 0);
+}
+
+/* ---- Settings ---- */
+async function getGeminiKey(){
+  let key = localStorage.getItem('rh_gemini_key');
+  if(key) return key;
+  return new Promise((resolve) => {
+    showModal(`
+      <h3>Clé API Google AI Studio requise</h3>
+      <p style="font-size:13px;color:#5b6b64;">
+        Cette fonctionnalité appelle l'IA directement depuis ton navigateur (l'app n'est pas encore hébergée sur un serveur).
+        Colle ta clé personnelle ci-dessous — elle reste uniquement sur cet appareil, jamais envoyée à Supabase.
+        Tu peux en créer une gratuitement sur <b>aistudio.google.com</b> → Get API key.
+      </p>
+      <label>Clé API Gemini</label>
+      <input id="ak-input" type="password" placeholder="AIza...">
+      <div class="modal-actions">
+        <button class="btn-cancel" id="ak-cancel">Annuler</button>
+        <button class="btn-primary" id="ak-save">Enregistrer</button>
+      </div>
+    `);
+    document.getElementById('ak-cancel').onclick = () => { closeModal(); resolve(null); };
+    document.getElementById('ak-save').onclick = () => {
+      const val = document.getElementById('ak-input').value.trim();
+      if(!val) return;
+      localStorage.setItem('rh_gemini_key', val);
+      closeModal();
+      resolve(val);
+    };
+  });
+}
+
+async function callGemini(key, prompt){
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-goog-api-key': key,
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+    }),
+  });
+  if(res.status === 400 || res.status === 401 || res.status === 403){
+    localStorage.removeItem('rh_gemini_key');
+    throw new Error('Clé API invalide ou refusée — réessaie avec une nouvelle clé.');
+  }
+  if(!res.ok){
+    const body = await res.text();
+    throw new Error(`Erreur API (${res.status}) : ${body.slice(0,200)}`);
+  }
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('');
+  if(!text) throw new Error("Réponse vide de l'IA.");
+  return text;
+}
+
+async function uploadCompanyImage(file, kind){
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${company.id}/${kind}.${ext}`;
+  const { error } = await sb.storage.from('company-media').upload(path, file, { upsert: true, cacheControl: '3600' });
+  if(error) throw error;
+  const { data } = sb.storage.from('company-media').getPublicUrl(path);
+  return data.publicUrl + '?v=' + Date.now(); // cache-bust so a replaced image shows immediately
+}
+
+function renderSettings(main){
+  main.innerHTML = `
+    <h2>Paramètres</h2>
+    <div class="subhead">Le profil public que verront vos futurs clients recommandés.</div>
+    <div class="panel">
+      <div class="panel-header"><h3>Photo de couverture & logo</h3></div>
+      <div class="cover-upload" id="cover-preview">
+        ${company.cover_url ? `<img src="${company.cover_url}">` : ''}
+        <label class="upload-hint">${company.cover_url ? 'Changer la couverture' : '+ Ajouter une couverture'}
+          <input type="file" id="cover-input" accept="image/*" style="display:none;">
+        </label>
+      </div>
+      <div class="logo-row">
+        <div class="logo-upload" id="logo-preview">
+          ${company.logo_url ? `<img src="${company.logo_url}">` : (company.name ? company.name[0].toUpperCase() : '?')}
+        </div>
+        <label class="upload-label">Changer le logo
+          <input type="file" id="logo-input" accept="image/*">
+        </label>
+      </div>
+
+      <div class="panel-header"><h3>Informations de l'entreprise</h3></div>
+      <label>Nom de l'entreprise</label>
+      <input id="set-name" value="${company.name || ''}">
+      <label>Secteur d'activité</label>
+      <input id="set-sector" value="${company.sector || ''}">
+      <label>Ville / Pays</label>
+      <input id="set-location" value="${company.location || ''}">
+      <label>Téléphone</label>
+      <input id="set-phone" value="${company.phone || ''}">
+      <label>Horaires d'ouverture (optionnel)</label>
+      <input id="set-hours" value="${company.opening_hours || ''}" placeholder="Ex: Lun-Sam 8h-19h">
+      <label style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Description courte (visible sur votre page publique)</span>
+        ${isPremiumPlan()
+          ? `<button class="btn-sm" id="ai-desc-btn" style="text-transform:none;letter-spacing:0;font-weight:600;">🤖 Générer avec l'IA</button>`
+          : `<button class="btn-sm" id="ai-desc-locked" style="text-transform:none;letter-spacing:0;font-weight:600;opacity:0.7;">🔒 IA — Plan Pro</button>`
+        }
+      </label>
+      <textarea id="set-desc" rows="3" placeholder="Ex: Vêtements et accessoires faits main, livraison à Lomé.">${company.description || ''}</textarea>
+
+      <button class="btn-primary" id="save-settings-btn">Enregistrer les modifications</button>
+      <div class="err" id="settings-msg" style="color:var(--forest-dark);"></div>
+    </div>
+  `;
+
+  document.getElementById('cover-preview').addEventListener('click', (e) => {
+    if(e.target.tagName !== 'INPUT') document.getElementById('cover-input').click();
+  });
+  document.getElementById('cover-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    document.getElementById('cover-preview').querySelector('.upload-hint').textContent = 'Envoi en cours...';
+    try{
+      const url = await uploadCompanyImage(file, 'cover');
+      await sb.from('companies').update({ cover_url: url }).eq('id', company.id);
+      company.cover_url = url;
+      renderSettings(main);
+    }catch(err){
+      document.getElementById('settings-msg').style.color = 'var(--red)';
+      document.getElementById('settings-msg').textContent = "Échec de l'envoi : " + err.message;
+    }
+  });
+  document.getElementById('logo-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    document.getElementById('logo-preview').textContent = '...';
+    try{
+      const url = await uploadCompanyImage(file, 'logo');
+      await sb.from('companies').update({ logo_url: url }).eq('id', company.id);
+      company.logo_url = url;
+      document.getElementById('sb-logo').innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+      renderSettings(main);
+    }catch(err){
+      document.getElementById('settings-msg').style.color = 'var(--red)';
+      document.getElementById('settings-msg').textContent = "Échec de l'envoi : " + err.message;
+    }
+  });
+
+  const aiDescBtn = document.getElementById('ai-desc-btn');
+  if(aiDescBtn){
+    aiDescBtn.onclick = async () => {
+      const key = await getGeminiKey();
+      if(!key) return;
+      aiDescBtn.textContent = '⏳ Génération...';
+      try{
+        const sector = document.getElementById('set-sector').value.trim() || company.sector || 'petite entreprise';
+        const location = document.getElementById('set-location').value.trim() || company.location || '';
+        const name = document.getElementById('set-name').value.trim() || company.name;
+        const text = await callGemini(key,
+          `Écris une description courte (2 phrases maximum, 220 caractères max) pour la page publique d'une entreprise appelée "${name}", secteur "${sector}"${location ? `, située à "${location}"` : ''}. Ton chaleureux et professionnel, en français, sans guillemets, sans emoji.`
+        );
+        document.getElementById('set-desc').value = text.trim();
+      }catch(err){
+        alert("Échec de la génération : " + err.message);
+      }
+      aiDescBtn.textContent = "🤖 Générer avec l'IA";
+    };
+  }
+  const lockedBtn = document.getElementById('ai-desc-locked');
+  if(lockedBtn){
+    lockedBtn.onclick = () => {
+      currentView = 'subscription';
+      pushViewState(currentView);
+      renderNav(); renderView();
+    };
+  }
+
+  document.getElementById('save-settings-btn').onclick = async () => {
+    const updates = {
+      name: document.getElementById('set-name').value.trim() || company.name,
+      sector: document.getElementById('set-sector').value.trim(),
+      location: document.getElementById('set-location').value.trim(),
+      phone: document.getElementById('set-phone').value.trim(),
+      opening_hours: document.getElementById('set-hours').value.trim(),
+      description: document.getElementById('set-desc').value.trim(),
+    };
+    await sb.from('companies').update(updates).eq('id', company.id);
+    Object.assign(company, updates);
+    document.getElementById('sb-company').textContent = company.name;
+    document.getElementById('settings-msg').textContent = '✓ Profil mis à jour.';
+  };
+}
+
+/* ---- Team ---- */
+async function renderTeam(main){
+  main.innerHTML = `<h2>Équipe</h2><div class="subhead">Chargement...</div>`;
+  const [{ data: members }, { data: invites }] = await Promise.all([
+    sb.from('users').select('*').eq('company_id', session.companyId).order('created_at'),
+    sb.from('company_invites').select('*').eq('company_id', session.companyId).is('used_by', null).order('created_at', { ascending: false }),
+  ]);
+
+  main.innerHTML = `
+    <h2>Équipe</h2>
+    <div class="subhead">Ajoutez des collègues qui pourront gérer les recommandations avec vous (plan Business).</div>
+    <div class="panel">
+      <div class="panel-header"><h3>Membres (${(members||[]).length})</h3><button class="btn-sm" id="invite-btn">+ Inviter un coéquipier</button></div>
+      <div class="table-scroll"><table><thead><tr><th>Email</th><th>Rôle</th><th></th></tr></thead><tbody>
+        ${(members||[]).map(m => `<tr><td>${m.email || '—'}</td><td>${m.role === 'owner' ? '👑 Propriétaire' : '👤 Staff'}</td>
+          <td>${m.role === 'staff' && session.role === 'owner' ? `<button class="btn-sm" style="border-color:var(--red);color:var(--red);" data-remove-member="${m.id}">Retirer</button>` : ''}</td></tr>`).join('')}
+      </tbody></table></div>
+    </div>
+    ${(invites||[]).length ? `
+    <div class="panel">
+      <div class="panel-header"><h3>Invitations en attente</h3></div>
+      <div class="table-scroll"><table><thead><tr><th>Code</th><th></th></tr></thead><tbody>
+        ${invites.map(inv => `<tr><td><span class="code-badge">${inv.code}</span></td><td><button class="btn-sm" data-copy-code="${inv.code}">Copier</button></td></tr>`).join('')}
+      </tbody></table></div>
+    </div>` : ''}
+  `;
+
+  main.querySelectorAll('[data-remove-member]').forEach(btn => {
+    btn.onclick = async () => {
+      if(!confirm("Retirer l'accès de ce membre de l'équipe ?")) return;
+      const { error } = await sb.from('users').delete().eq('id', btn.dataset.removeMember);
+      if(error){ alert("Erreur : " + error.message); return; }
+      renderTeam(main);
+    };
+  });
+  document.getElementById('invite-btn').onclick = async () => {
+    const code = uid() + uid();
+    const { error } = await sb.from('company_invites').insert({ company_id: session.companyId, code });
+    if(error){ alert("Erreur : " + error.message); return; }
+    showModal(`
+      <h3>Invitation créée</h3>
+      <p style="font-size:13px;color:#5b6b64;">Partagez ce code à votre coéquipier. Il doit s'inscrire sur ReferralHub et le coller dans le champ "Code d'invitation d'équipe" au moment de créer son compte.</p>
+      <div class="link-box"><input readonly value="${code}"></div>
+      <div class="modal-actions"><button class="btn-primary" id="inv-close" style="margin-top:0;">Fermer</button></div>
+    `);
+    document.getElementById('inv-close').onclick = () => { closeModal(); renderTeam(main); };
+  };
+  main.querySelectorAll('[data-copy-code]').forEach(btn => {
+    btn.onclick = () => { navigator.clipboard?.writeText(btn.dataset.copyCode); btn.textContent = 'Copié ✓'; };
+  });
+}
+
+/* ---- Admin (platform-level, founder only) ---- */
+async function renderAdmin(main){
+  main.innerHTML = `<h2>Admin</h2><div class="subhead">Chargement...</div>`;
+  const [{ data: companies }, { data: subs }, { data: admins }] = await Promise.all([
+    sb.from('companies').select('*').order('created_at', { ascending: false }),
+    sb.from('subscriptions').select('*'),
+    sb.from('platform_admins').select('*').order('created_at'),
+  ]);
+
+  main.innerHTML = `
+    <h2>Admin</h2>
+    <div class="subhead">Vue d'ensemble de toutes les entreprises sur ReferralHub — visible uniquement par les administrateurs nommés.</div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Administrateurs de la plateforme (${(admins||[]).length})</h3><button class="btn-sm" id="add-admin-btn">+ Nommer un administrateur</button></div>
+      ${(admins||[]).map(a => `
+        <div class="admin-row">
+          <div>
+            <div class="adm-name">${a.email || '—'}</div>
+            <div class="adm-sub">Administrateur depuis le ${new Date(a.created_at).toLocaleDateString('fr-FR')}</div>
+          </div>
+          <div class="adm-actions">
+            ${a.auth_id === session.authUser.id
+              ? `<span style="font-size:12px;color:#8a978f;">C'est vous</span>`
+              : `<button class="btn-sm" style="border-color:var(--red);color:var(--red);" data-remove-admin="${a.id}">Retirer</button>`}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Entreprises (${(companies||[]).length})</h3></div>
+      ${(companies||[]).map(co => {
+        const sub = (subs||[]).find(s => s.company_id === co.id);
+        const plan = sub ? sub.plan : 'starter';
+        const status = sub ? sub.subscription_status : 'free';
+        return `
+        <div class="admin-row">
+          <div>
+            <div class="adm-name">${co.name} ${co.account_status === 'cancelled' ? '<span class="pill prospect">Désactivée</span>' : ''}</div>
+            <div class="adm-sub">${co.sector || '—'} · ${co.location || '—'} · Plan ${PLANS[plan].label} (${status})</div>
+          </div>
+          <div class="adm-actions">
+            ${plan === 'starter' || status !== 'active' ? `
+              <button class="btn-sm" data-confirm-pay="${co.id}" data-plan="pro">Confirmer paiement Pro</button>
+              <button class="btn-sm" data-confirm-pay="${co.id}" data-plan="business">Confirmer paiement Business</button>
+            ` : ''}
+            <button class="btn-sm" style="border-color:var(--red);color:var(--red);" data-toggle-account="${co.id}" data-status="${co.account_status}">
+              ${co.account_status === 'cancelled' ? 'Réactiver' : 'Désactiver'}
+            </button>
+          </div>
+        </div>`;
+      }).join('') || `<div class="empty">Aucune entreprise pour l'instant.</div>`}
+    </div>
+  `;
+
+  document.getElementById('add-admin-btn').onclick = () => openAddAdminModal(main);
+  main.querySelectorAll('[data-remove-admin]').forEach(btn => {
+    btn.onclick = async () => {
+      if(!confirm("Retirer les droits d'administrateur à cette personne ?")) return;
+      const { error } = await sb.from('platform_admins').delete().eq('id', btn.dataset.removeAdmin);
+      if(error){ alert("Erreur : " + error.message); return; }
+      renderAdmin(main);
+    };
+  });
+  main.querySelectorAll('[data-confirm-pay]').forEach(btn => {
+    btn.onclick = async () => {
+      const companyId = btn.dataset.confirmPay;
+      const plan = btn.dataset.plan;
+      const amount = plan === 'pro' ? 5000 : 20000;
+      const existingSub = (subs||[]).find(s => s.company_id === companyId);
+      const fields = { plan, subscription_status: 'active' };
+      const { error } = existingSub
+        ? await sb.from('subscriptions').update(fields).eq('id', existingSub.id)
+        : await sb.from('subscriptions').insert({ company_id: companyId, ...fields });
+      if(error){ alert("Erreur : " + error.message); return; }
+      await sb.from('payments').insert({
+        company_id: companyId, amount, currency: 'FCFA', method: 'manual', provider: 'manual',
+        status: 'succeeded', paid_at: new Date().toISOString(),
+      });
+      renderAdmin(main);
+    };
+  });
+  main.querySelectorAll('[data-toggle-account]').forEach(btn => {
+    btn.onclick = async () => {
+      const newStatus = btn.dataset.status === 'cancelled' ? 'active' : 'cancelled';
+      const { error } = await sb.from('companies').update({ account_status: newStatus }).eq('id', btn.dataset.toggleAccount);
+      if(error){ alert("Erreur : " + error.message); return; }
+      renderAdmin(main);
+    };
+  });
+}
+
+function openAddAdminModal(main){
+  showModal(`
+    <h3>Nommer un administrateur</h3>
+    <p style="font-size:13px;color:#5b6b64;">La personne doit déjà avoir un compte ReferralHub (peu importe son entreprise). Elle aura ensuite tous les pouvoirs d'administration de la plateforme, y compris celui d'en nommer d'autres.</p>
+    <label>Email du compte à nommer</label>
+    <input id="aa-email" type="email" placeholder="personne@exemple.com">
+    <div class="err" id="aa-err"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="aa-cancel">Annuler</button>
+      <button class="btn-primary" id="aa-save">Nommer</button>
+    </div>
+  `);
+  document.getElementById('aa-cancel').onclick = closeModal;
+  document.getElementById('aa-save').onclick = async () => {
+    const email = document.getElementById('aa-email').value.trim();
+    if(!email) return;
+    const { data: userRow, error: findErr } = await sb.from('users').select('auth_id, email').eq('email', email).maybeSingle();
+    if(findErr || !userRow){
+      document.getElementById('aa-err').textContent = "Aucun compte ReferralHub trouvé avec cet email.";
+      return;
+    }
+    const { error } = await sb.from('platform_admins').insert({ auth_id: userRow.auth_id, email: userRow.email });
+    if(error){
+      document.getElementById('aa-err').textContent = error.message.includes('duplicate') ? 'Cette personne est déjà administratrice.' : error.message;
+      return;
+    }
+    closeModal();
+    renderAdmin(main);
+  };
+}
+
+/* ---- Subscription ---- */
+const PLANS = {
+  starter: { label: 'Starter', price: 'Gratuit', features: ['1 campagne', '50 recommandations / mois', 'Statistiques de base'] },
+  pro: { label: 'Pro', price: '5 000 FCFA/mois', features: ['Campagnes illimitées', 'Recommandations illimitées', 'Statistiques avancées', 'Partage WhatsApp'] },
+  business: { label: 'Business', price: '15 000 – 25 000 FCFA/mois', features: ['Tout Pro', 'Multi-utilisateurs', 'API', 'Support prioritaire'] },
+};
+
+function renderSubscription(main){
+  const sub = companyData.subscription;
+  const currentPlan = sub ? sub.plan : 'starter';
+  const status = sub ? sub.subscription_status : 'free';
+
+  let banner = '';
+  if(status === 'trial' && sub.trial_ends_at){
+    const days = Math.max(0, Math.ceil((new Date(sub.trial_ends_at) - new Date()) / 86400000));
+    banner = `<div class="status-banner trial">🕒 Essai ${PLANS[currentPlan].label} en cours — ${days} jour(s) restant(s). Après l'essai, un paiement Flooz/TMoney sera nécessaire pour continuer.</div>`;
+  } else if(status === 'active'){
+    banner = `<div class="status-banner">✅ Abonnement ${PLANS[currentPlan].label} actif.</div>`;
+  } else if(status === 'past_due'){
+    banner = `<div class="status-banner trial">⚠️ Paiement en attente de confirmation pour le plan ${PLANS[currentPlan].label}.</div>`;
+  } else {
+    banner = `<div class="status-banner">Vous êtes actuellement sur le plan gratuit Starter.</div>`;
+  }
+
+  main.innerHTML = `
+    <h2>Abonnement</h2>
+    <div class="subhead">Aucun paiement automatique pour l'instant — confirmation manuelle par mobile money.</div>
+    ${banner}
+    <div class="plan-grid">
+      ${Object.entries(PLANS).map(([key, p]) => `
+        <div class="plan-card ${key === currentPlan ? 'current' : ''}">
+          ${key === currentPlan ? '<span class="current-tag">Plan actuel</span>' : ''}
+          <div class="plan-name">${p.label}</div>
+          <div class="plan-price">${p.price}</div>
+          <ul>${p.features.map(f => `<li>${f}</li>`).join('')}</ul>
+          ${key === 'starter'
+            ? (currentPlan === 'starter' ? '' : `<button class="btn-sm" data-downgrade>Revenir au gratuit</button>`)
+            : key === currentPlan && status === 'trial'
+              ? `<button class="btn-primary" style="margin-top:0;" data-confirm-payment="${key}">J'ai payé — activer</button>`
+              : key === currentPlan && status === 'active'
+                ? ''
+                : `<button class="btn-primary" style="margin-top:0;" data-start-trial="${key}">Essai gratuit 14 jours</button>`
+          }
+        </div>
+      `).join('')}
+    </div>
+    <p style="font-size:12px;color:#8a978f;margin-top:18px;">
+      Pour payer : envoyez le montant par Flooz ou TMoney, puis cliquez "J'ai payé" — la confirmation est faite manuellement en attendant l'automatisation des paiements.
+    </p>
+  `;
+
+  main.querySelectorAll('[data-start-trial]').forEach(btn => {
+    btn.onclick = async () => {
+      const plan = btn.dataset.startTrial;
+      const trialEnds = new Date(Date.now() + 14*86400000).toISOString();
+      const err = await upsertSubscription({ plan, subscription_status: 'trial', trial_ends_at: trialEnds });
+      if(err){ alert("Erreur : " + err.message); return; }
+      await fetchCompanyData();
+      renderView();
+    };
+  });
+  main.querySelectorAll('[data-confirm-payment]').forEach(btn => {
+    btn.onclick = async () => {
+      const plan = btn.dataset.confirmPayment;
+      const err = await upsertSubscription({ plan, subscription_status: 'active' });
+      if(err){ alert("Erreur : " + err.message); return; }
+      const { error: payErr } = await sb.from('payments').insert({
+        company_id: session.companyId, amount: plan === 'pro' ? 5000 : 20000,
+        currency: 'FCFA', method: 'manual', provider: 'manual', status: 'succeeded', paid_at: new Date().toISOString(),
+      });
+      if(payErr) console.warn('payment log failed:', payErr.message);
+      await fetchCompanyData();
+      renderView();
+    };
+  });
+  const downgradeBtn = main.querySelector('[data-downgrade]');
+  if(downgradeBtn) downgradeBtn.onclick = async () => {
+    const err = await upsertSubscription({ plan: 'starter', subscription_status: 'free' });
+    if(err){ alert("Erreur : " + err.message); return; }
+    await fetchCompanyData();
+    renderView();
+  };
+}
+
+async function upsertSubscription(fields){
+  const sub = companyData.subscription;
+  let error;
+  if(sub){
+    ({ error } = await sb.from('subscriptions').update(fields).eq('id', sub.id));
+  } else {
+    ({ error } = await sb.from('subscriptions').insert({ company_id: session.companyId, ...fields }));
+  }
+  return error || null;
+}
+
+/* ======================= MODAL HELPERS ======================= */
+function showModal(html){
+  document.getElementById('modal-inner').innerHTML = html;
+  document.getElementById('modal-bg').classList.add('show');
+  history.pushState({ type: 'modal' }, '');
+  modalHistoryPushed = true;
+}
+function closeModal(){
+  document.getElementById('modal-bg').classList.remove('show');
+  if(modalHistoryPushed){
+    modalHistoryPushed = false;
+    history.back();
+  }
+}
+document.getElementById('modal-bg').addEventListener('click', (e) => {
+  if(e.target.id === 'modal-bg') closeModal();
+});
+
+/* ======================= PUBLIC REFERRAL PAGE ======================= */
+async function renderPublicPage(code){
+  document.getElementById('public-screen').style.display = 'block';
+  document.getElementById('auth-screen').style.display = 'none';
+  const wrap = document.getElementById('public-wrap');
+
+  const { data: link } = await sb.from('referral_links').select('*').eq('code', code).eq('active', true).maybeSingle();
+  if(!link){
+    wrap.innerHTML = `<div class="public-card"><p>Ce lien de recommandation n'est plus valide.</p></div>`;
+    return;
+  }
+  sb.rpc('increment_referral_link_clicks', { p_code: code }); // fire-and-forget, doesn't block the page
+
+  const { data: referrer } = await sb.from('referrers').select('*').eq('id', link.referrer_id).maybeSingle();
+  const { data: pubCompany } = await sb.from('companies').select('*').eq('id', referrer.company_id).maybeSingle();
+  const { data: refCustomer } = await sb.from('customers').select('*').eq('id', referrer.customer_id).maybeSingle();
+  const { data: pubCampaign } = link.campaign_id ? await sb.from('campaigns').select('*').eq('id', link.campaign_id).maybeSingle() : { data: null };
+
+  wrap.innerHTML = `
+    <div class="public-card" style="padding:0;overflow:hidden;">
+      ${pubCompany.cover_url ? `<div class="public-cover" style="background-image:url('${pubCompany.cover_url}')"></div>` : `<div class="public-cover"></div>`}
+      <div style="padding:0 32px 32px;">
+        ${pubCompany.logo_url ? `<img class="public-logo" src="${pubCompany.logo_url}">` : `<div class="public-logo" style="display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:var(--forest-dark);">${pubCompany.name[0].toUpperCase()}</div>`}
+        <div class="biz" style="margin-top:10px;">${pubCompany.name}</div>
+        <div class="loc">📍 ${pubCompany.location || ''} ${pubCompany.phone ? ' · 📞 '+pubCompany.phone : ''}</div>
+        ${pubCompany.opening_hours ? `<div class="loc">🕒 ${pubCompany.opening_hours}</div>` : ''}
+        ${pubCompany.description ? `<p style="font-size:13px;color:#5b6b64;margin:8px 0 0;">${pubCompany.description}</p>` : ''}
+        ${pubCampaign && pubCampaign.active ? `<div class="reco-box" style="margin-top:14px;background:var(--amber-soft);">🔥 ${pubCampaign.name}</div>` : ''}
+        <div class="reco-box" style="margin-top:12px;">Vous avez été recommandé(e) par <b>${refCustomer ? refCustomer.name : 'un client'}</b> 👋</div>
+        <div id="lead-form">
+          <label>Votre nom</label><input id="pf-name" placeholder="Votre nom">
+          <label>Votre téléphone</label><input id="pf-phone" placeholder="90 XX XX XX">
+          <div class="err" id="pf-err"></div>
+          <button class="btn-primary" id="pf-submit">Découvrir ${pubCompany.name}</button>
+        </div>
+        <p style="font-size:12px;color:#8a978f;margin-top:20px;text-align:center;">
+          Vous êtes vous-même commerçant·e ? <a href="${window.location.origin}${window.location.pathname}" style="color:var(--forest);font-weight:600;">Créez votre propre programme de recommandation →</a>
+        </p>
+      </div>
+    </div>
+  `;
+  document.getElementById('pf-submit').onclick = async () => {
+    const name = document.getElementById('pf-name').value.trim();
+    const phone = document.getElementById('pf-phone').value.trim();
+    if(!name || !phone) return;
+    if(refCustomer && refCustomer.phone === phone){
+      document.getElementById('pf-err').textContent = "Vous ne pouvez pas vous recommander vous-même.";
+      return;
+    }
+    const { error } = await sb.from('referrals').insert({
+      referral_link_id: link.id, company_id: pubCompany.id,
+      prospect_name: name, prospect_phone: phone, status: 'lead',
+    });
+    if(error){
+      document.getElementById('pf-err').textContent = error.message.includes('duplicate') ? 'Ce numéro a déjà été enregistré.' : error.message;
+      return;
+    }
+    wrap.querySelector('.public-card').innerHTML = `
+      ${pubCompany.cover_url ? `<div class="public-cover" style="background-image:url('${pubCompany.cover_url}')"></div>` : `<div class="public-cover"></div>`}
+      <div style="padding:0 32px 32px;">
+        <div class="biz" style="margin-top:16px;">${pubCompany.name}</div>
+        <div class="success-box" style="margin-top:16px;">✅ Merci ${name} ! ${pubCompany.name} vous contactera bientôt.</div>
+        <p style="font-size:12px;color:#8a978f;margin-top:20px;text-align:center;">
+          Vous êtes vous-même commerçant·e ? <a href="${window.location.origin}${window.location.pathname}" style="color:var(--forest);font-weight:600;">Créez votre propre programme de recommandation →</a>
+        </p>
+      </div>
+    `;
+  };
+}
+
+init();
+</script>
+</body>
+</html>
